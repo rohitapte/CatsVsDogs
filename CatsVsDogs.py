@@ -10,7 +10,7 @@ import math
 LEARNING_RATE = 0.1
 LEARNING_RATE_DECAY=0.1
 NUM_GENS_TO_WAIT=250.0
-TRAINING_ITERATIONS = 60000
+TRAINING_ITERATIONS = 100000
 DROPOUT = 0.8
 BATCH_SIZE = 50
 VALIDATION_SIZE = 5000
@@ -132,23 +132,38 @@ pool_size=[1,3,3,1]
 strides=[1,2,2,1]
 pool2=tf.nn.max_pool(relu_conv2,ksize=pool_size,strides=strides,padding='SAME',name='pool_layer2')
 norm2=tf.nn.lrn(pool2,depth_radius=5,bias=2.0,alpha=1e-3,beta=0.75,name='norm2')
-reshaped_output=tf.reshape(norm2, [-1, 16*16*64])
+
+with tf.variable_scope('conv3') as scope:
+	conv3_kernel=truncated_normal_var(name='conv3_kernel',shape=[5,5,64,64],dtype=tf.float32)
+	strides=[1,1,1,1]
+	conv3=tf.nn.conv2d(norm2,conv3_kernel,strides,padding='SAME')
+	conv3_bias=zero_var(name='conv3_bias',shape=[64],dtype=tf.float32)
+	conv3_add_bias=tf.nn.bias_add(conv3,conv3_bias)
+	relu_conv3=tf.nn.relu(conv3_add_bias)
+
+pool_size=[1,3,3,1]
+strides=[1,2,2,1]
+pool3=tf.nn.max_pool(relu_conv3,ksize=pool_size,strides=strides,padding='SAME',name='pool_layer3')
+norm3=tf.nn.lrn(pool3,depth_radius=5,bias=2.0,alpha=1e-3,beta=0.75,name='norm3')
+
+
+reshaped_output=tf.reshape(norm3, [-1, 8*8*64])
 reshaped_dim=reshaped_output.get_shape()[1].value
 
 #with tf.variable_scope('full1') as scope:
-full_weight1=truncated_normal_var(name='full_mult1',shape=[reshaped_dim,384],dtype=tf.float32)
-full_bias1=zero_var(name='full_bias1',shape=[384],dtype=tf.float32)
+full_weight1=truncated_normal_var(name='full_mult1',shape=[reshaped_dim,1024],dtype=tf.float32)
+full_bias1=zero_var(name='full_bias1',shape=[1024],dtype=tf.float32)
 full_layer1=tf.nn.relu(tf.add(tf.matmul(reshaped_output,full_weight1),full_bias1))
 full_layer1=tf.nn.dropout(full_layer1,keep_prob)
 
 #with tf.variable_scope('full2') as scope:
-full_weight2=truncated_normal_var(name='full_mult2',shape=[384, 192],dtype=tf.float32)
-full_bias2=zero_var(name='full_bias2',shape=[192],dtype=tf.float32)
+full_weight2=truncated_normal_var(name='full_mult2',shape=[1024,128],dtype=tf.float32)
+full_bias2=zero_var(name='full_bias2',shape=[128],dtype=tf.float32)
 full_layer2=tf.nn.relu(tf.add(tf.matmul(full_layer1,full_weight2),full_bias2))
 full_layer2=tf.nn.dropout(full_layer2,keep_prob)
 
 #with tf.variable_scope('full3') as scope:
-full_weight3=truncated_normal_var(name='full_mult3',shape=[192,NUM_ANIMALS],dtype=tf.float32)
+full_weight3=truncated_normal_var(name='full_mult3',shape=[128,NUM_ANIMALS],dtype=tf.float32)
 full_bias3=zero_var(name='full_bias3',shape=[NUM_ANIMALS],dtype=tf.float32)
 final_output=tf.add(tf.matmul(full_layer2,full_weight3),full_bias3)
 #final_output=tf.nn.softmax(final_output)
