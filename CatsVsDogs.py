@@ -10,8 +10,8 @@ import math
 LEARNING_RATE = 0.1
 LEARNING_RATE_DECAY=0.1
 NUM_GENS_TO_WAIT=250.0
-TRAINING_ITERATIONS = 100000
-DROPOUT = 0.8
+TRAINING_ITERATIONS = 200000
+DROPOUT = 0.5
 BATCH_SIZE = 50
 VALIDATION_SIZE = 5000
 IMAGE_SIZE=64
@@ -39,13 +39,15 @@ def read_image_and_resize(filename):
 	#img=cv2.imread(filename,cv2.IMREAD_GRAYSCALE)
 	#return cv2.resize(img,(IMAGE_SIZE,IMAGE_SIZE),interpolation=cv2.INTER_LINEAR)
 	img=cv2.imread(filename,cv2.IMREAD_COLOR)
+	img=cv2.cvtColor(img,cv2.COLOR_BGR2RGB)
 	if (img.shape[0] >= img.shape[1]):
 		resizeto=(IMAGE_SIZE,int(round(IMAGE_SIZE*(float (img.shape[1])/img.shape[0]))));
 	else:
 		resizeto = (int (round (IMAGE_SIZE * (float (img.shape[0])  / img.shape[1]))), IMAGE_SIZE);
 	img2=cv2.resize(img,(resizeto[1],resizeto[0]),interpolation=cv2.INTER_CUBIC)
 	img3=cv2.copyMakeBorder(img2,0,IMAGE_SIZE-img2.shape[0],0,IMAGE_SIZE-img2.shape[1],cv2.BORDER_CONSTANT,0)
-	return img3[:,:,::-1]
+	#return img3[:,:,::-1]
+	return img3
 
 def convert_image_to_vector(images):
 	count=len(images)
@@ -103,9 +105,9 @@ def truncated_normal_var(name,shape,dtype):
 def zero_var(name,shape,dtype):
 	return(tf.get_variable(name=name,shape=shape,dtype=dtype,initializer=tf.constant_initializer(0.0)))
 
-x=tf.placeholder(tf.float32,shape=[None,x_train.shape[1],x_train.shape[2],x_train.shape[3]])
-labels=tf.placeholder(tf.float32,shape=[None,y_train.shape[1]])
-keep_prob=tf.placeholder(tf.float32)
+x=tf.placeholder(tf.float32,shape=[None,x_train.shape[1],x_train.shape[2],x_train.shape[3]],name='x')
+labels=tf.placeholder(tf.float32,shape=[None,y_train.shape[1]],name='labels')
+keep_prob=tf.placeholder(tf.float32,name='keep_prob')
 
 with tf.variable_scope('conv1') as scope:
 	conv1_kernel=truncated_normal_var(name='conv1_kernel',shape=[5,5,3,64],dtype=tf.float32)
@@ -146,8 +148,20 @@ strides=[1,2,2,1]
 pool3=tf.nn.max_pool(relu_conv3,ksize=pool_size,strides=strides,padding='SAME',name='pool_layer3')
 norm3=tf.nn.lrn(pool3,depth_radius=5,bias=2.0,alpha=1e-3,beta=0.75,name='norm3')
 
+with tf.variable_scope('conv4') as scope:
+	conv4_kernel=truncated_normal_var(name='conv4_kernel',shape=[5,5,64,64],dtype=tf.float32)
+	strides=[1,1,1,1]
+	conv4=tf.nn.conv2d(norm3,conv4_kernel,strides,padding='SAME')
+	conv4_bias=zero_var(name='conv4_bias',shape=[64],dtype=tf.float32)
+	conv4_add_bias=tf.nn.bias_add(conv4,conv4_bias)
+	relu_conv4=tf.nn.relu(conv4_add_bias)
 
-reshaped_output=tf.reshape(norm3, [-1, 8*8*64])
+pool_size=[1,3,3,1]
+strides=[1,2,2,1]
+pool4=tf.nn.max_pool(relu_conv4,ksize=pool_size,strides=strides,padding='SAME',name='pool_layer4')
+norm4=tf.nn.lrn(pool4,depth_radius=5,bias=2.0,alpha=1e-3,beta=0.75,name='norm4')
+
+reshaped_output=tf.reshape(norm4, [-1, 4*4*64])
 reshaped_dim=reshaped_output.get_shape()[1].value
 
 #with tf.variable_scope('full1') as scope:
