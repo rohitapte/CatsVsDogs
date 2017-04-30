@@ -60,10 +60,10 @@ def convert_image_to_vector(images):
 
 x_train=convert_image_to_vector(train_images)
 x_test=convert_image_to_vector(test_images)
-mean=np.mean(x_train)
-stddev=np.std(x_train)
-x_test-=mean
-x_test/=stddev
+#mean=np.mean(x_train)
+#stddev=np.std(x_train)
+#x_test-=mean
+#x_test/=stddev
 
 train_labels=[]
 for i in train_images:
@@ -82,8 +82,8 @@ y_val=y_train[:VALIDATION_SIZE]
 y_train=y_train[VALIDATION_SIZE:]
 
 def updateImage(x_train_data,distort=True):
-	global mean
-	global stddev
+	#global mean
+	#global stddev
 	x_temp=x_train_data.copy()
 	x_output=np.zeros(shape=(0,IMAGE_SIZE,IMAGE_SIZE,CHANNELS))
 	for i in range(0,x_temp.shape[0]):
@@ -95,10 +95,14 @@ def updateImage(x_train_data,distort=True):
 			temp=temp+brightness
 			contrast=random.uniform(0.2,1.8)
 			temp=temp*contrast
+		mean=np.mean(temp)
+		stddev=np.std(temp)
 		temp=(temp-mean)/stddev
 		temp=np.expand_dims(temp,axis=0)
 		x_output=np.append(x_output,temp,axis=0)
 	return x_output
+
+x_test=updateImage(x_test,False)
 
 def truncated_normal_var(name,shape,dtype):
 	return(tf.get_variable(name=name,shape=shape,dtype=dtype,initializer=tf.truncated_normal_initializer(stddev=0.05)))
@@ -171,18 +175,17 @@ full_layer1=tf.nn.relu(tf.add(tf.matmul(reshaped_output,full_weight1),full_bias1
 full_layer1=tf.nn.dropout(full_layer1,keep_prob)
 
 #with tf.variable_scope('full2') as scope:
-full_weight2=truncated_normal_var(name='full_mult2',shape=[1024,128],dtype=tf.float32)
-full_bias2=zero_var(name='full_bias2',shape=[128],dtype=tf.float32)
+full_weight2=truncated_normal_var(name='full_mult2',shape=[1024,256],dtype=tf.float32)
+full_bias2=zero_var(name='full_bias2',shape=[256],dtype=tf.float32)
 full_layer2=tf.nn.relu(tf.add(tf.matmul(full_layer1,full_weight2),full_bias2))
 full_layer2=tf.nn.dropout(full_layer2,keep_prob)
 
 #with tf.variable_scope('full3') as scope:
-full_weight3=truncated_normal_var(name='full_mult3',shape=[128,NUM_ANIMALS],dtype=tf.float32)
+full_weight3=truncated_normal_var(name='full_mult3',shape=[256,NUM_ANIMALS],dtype=tf.float32)
 full_bias3=zero_var(name='full_bias3',shape=[NUM_ANIMALS],dtype=tf.float32)
 final_output=tf.add(tf.matmul(full_layer2,full_weight3),full_bias3)
-#final_output=tf.nn.softmax(final_output)
-#cross_entropy = -tf.reduce_sum(labels*tf.log(tf.clip_by_value(final_output,1e-10,1.0)))
-cross_entropy=tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(logits=final_output,labels=labels),name='cross_entropy')
+logits=tf.identity(final_output,name='logits')
+cross_entropy=tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(logits=logits,labels=labels),name='cross_entropy')
 #train_step=tf.train.AdamOptimizer(LEARNING_RATE).minimize(cross_entropy)
 generation_run = tf.Variable(0, trainable=False)
 model_learning_rate=tf.train.exponential_decay(LEARNING_RATE,generation_run,NUM_GENS_TO_WAIT,LEARNING_RATE_DECAY,staircase=True)
@@ -263,3 +266,6 @@ with tf.Session() as sess:
 		validation_accuracy+=accuracy.eval(feed_dict={x:x_val[i*BATCH_SIZE:(i+1)*BATCH_SIZE],labels:y_val[i*BATCH_SIZE:(i+1)*BATCH_SIZE],keep_prob:1.0})
 	validation_accuracy/=(i+1.0)
 	print('validation_accuracy => %.4f'%validation_accuracy)
+	saver=tf.train.Saver()
+	save_path=saver.save(sess,'./CatsDogs_model')
+	sess.close()
