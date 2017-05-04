@@ -10,7 +10,7 @@ import math
 LEARNING_RATE = 0.1
 LEARNING_RATE_DECAY=0.1
 NUM_GENS_TO_WAIT=250.0
-TRAINING_ITERATIONS = 200000
+TRAINING_ITERATIONS = 400000
 DROPOUT = 0.5
 BATCH_SIZE = 50
 VALIDATION_SIZE = 5000
@@ -60,10 +60,10 @@ def convert_image_to_vector(images):
 
 x_train=convert_image_to_vector(train_images)
 x_test=convert_image_to_vector(test_images)
-#mean=np.mean(x_train)
-#stddev=np.std(x_train)
-#x_test-=mean
-#x_test/=stddev
+mean=np.mean(x_train)
+stddev=np.std(x_train)
+x_test-=mean
+x_test/=stddev
 
 train_labels=[]
 for i in train_images:
@@ -82,8 +82,8 @@ y_val=y_train[:VALIDATION_SIZE]
 y_train=y_train[VALIDATION_SIZE:]
 
 def updateImage(x_train_data,distort=True):
-	#global mean
-	#global stddev
+	global mean
+	global stddev
 	x_temp=x_train_data.copy()
 	x_output=np.zeros(shape=(0,IMAGE_SIZE,IMAGE_SIZE,CHANNELS))
 	for i in range(0,x_temp.shape[0]):
@@ -95,14 +95,14 @@ def updateImage(x_train_data,distort=True):
 			temp=temp+brightness
 			contrast=random.uniform(0.2,1.8)
 			temp=temp*contrast
-		mean=np.mean(temp)
-		stddev=np.std(temp)
+		#mean=np.mean(temp)
+		#stddev=np.std(temp)
 		temp=(temp-mean)/stddev
 		temp=np.expand_dims(temp,axis=0)
 		x_output=np.append(x_output,temp,axis=0)
 	return x_output
 
-x_test=updateImage(x_test,False)
+#x_test=updateImage(x_test,False)
 
 def truncated_normal_var(name,shape,dtype):
 	return(tf.get_variable(name=name,shape=shape,dtype=dtype,initializer=tf.truncated_normal_initializer(stddev=0.05)))
