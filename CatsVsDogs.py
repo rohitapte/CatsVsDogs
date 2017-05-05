@@ -10,7 +10,7 @@ import math
 LEARNING_RATE = 0.1
 LEARNING_RATE_DECAY=0.1
 NUM_GENS_TO_WAIT=250.0
-TRAINING_ITERATIONS = 400000
+TRAINING_ITERATIONS = 600000
 DROPOUT = 0.5
 BATCH_SIZE = 50
 VALIDATION_SIZE = 5000
@@ -55,7 +55,7 @@ def convert_image_to_vector(images):
 	for i,image_file in enumerate(images):
 		animalimage=read_image_and_resize(image_file)
 		data[i]=animalimage
-		if i%100==0:print('Processed {} of {}'.format(i,count))
+		if i%1000==0:print('Processed {} of {}'.format(i,count))
 	return data
 
 x_train=convert_image_to_vector(train_images)
@@ -125,6 +125,7 @@ pool_size=[1,3,3,1]
 strides=[1,2,2,1]
 pool1=tf.nn.max_pool(relu_conv1,ksize=pool_size,strides=strides,padding='SAME',name='pool_layer1')
 norm1=tf.nn.lrn(pool1,depth_radius=5,bias=2.0,alpha=1e-3,beta=0.75,name='norm1')
+norm1=tf.nn.dropout(norm1,keep_prob)
 
 with tf.variable_scope('conv2') as scope:
 	conv2_kernel=truncated_normal_var(name='conv2_kernel',shape=[5,5,64,64],dtype=tf.float32)
@@ -138,6 +139,7 @@ pool_size=[1,3,3,1]
 strides=[1,2,2,1]
 pool2=tf.nn.max_pool(relu_conv2,ksize=pool_size,strides=strides,padding='SAME',name='pool_layer2')
 norm2=tf.nn.lrn(pool2,depth_radius=5,bias=2.0,alpha=1e-3,beta=0.75,name='norm2')
+norm2=tf.nn.dropout(norm2,keep_prob)
 
 with tf.variable_scope('conv3') as scope:
 	conv3_kernel=truncated_normal_var(name='conv3_kernel',shape=[5,5,64,64],dtype=tf.float32)
@@ -151,6 +153,7 @@ pool_size=[1,3,3,1]
 strides=[1,2,2,1]
 pool3=tf.nn.max_pool(relu_conv3,ksize=pool_size,strides=strides,padding='SAME',name='pool_layer3')
 norm3=tf.nn.lrn(pool3,depth_radius=5,bias=2.0,alpha=1e-3,beta=0.75,name='norm3')
+norm3=tf.nn.dropout(norm3,keep_prob)
 
 with tf.variable_scope('conv4') as scope:
 	conv4_kernel=truncated_normal_var(name='conv4_kernel',shape=[5,5,64,64],dtype=tf.float32)
@@ -164,6 +167,7 @@ pool_size=[1,3,3,1]
 strides=[1,2,2,1]
 pool4=tf.nn.max_pool(relu_conv4,ksize=pool_size,strides=strides,padding='SAME',name='pool_layer4')
 norm4=tf.nn.lrn(pool4,depth_radius=5,bias=2.0,alpha=1e-3,beta=0.75,name='norm4')
+norm4=tf.nn.dropout(norm4,keep_prob)
 
 reshaped_output=tf.reshape(norm4, [-1, 4*4*64])
 reshaped_dim=reshaped_output.get_shape()[1].value
